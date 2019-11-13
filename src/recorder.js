@@ -69,10 +69,20 @@ export class Recorder {
         }
       };
 
+      var newRate;
+
       function init(config) {
         sampleRate = config.sampleRate;
         numChannels = config.numChannels;
         initBuffers();
+
+        // Google Speech to text max sample rate is 48000:
+        // Sets new rate to use in downsample function if over 48k
+        if (sampleRate > 48000) {
+          newRate = 44100;
+        } else {
+          newRate = sampleRate;
+        }
       }
 
       function record(inputBuffer) {
@@ -94,7 +104,7 @@ export class Recorder {
           interleaved = buffers[0];
         }
 
-        let downsampledBuffer = downsampleBuffer(interleaved, 44100); // Manually set 44100 for sample rate
+        let downsampledBuffer = downsampleBuffer(interleaved, newRate);
         let dataview = encodeWAV(downsampledBuffer);
         let audioBlob = new Blob([dataview], { type: type });
 
@@ -215,9 +225,9 @@ export class Recorder {
         /* channel count */
         view.setUint16(22, numChannels, true);
         /* sample rate */
-        view.setUint32(24, 44100, true); // manually set 44100 to match downsampled buffer rate
+        view.setUint32(24, newRate, true); // new rate will be <= 48000
         /* byte rate (sample rate * block align) */
-        view.setUint32(28, 44100 * 4, true); // manually set 44100 to match downsampled buffer rate
+        view.setUint32(28, newRate * 4, true);
         /* block align (channel count * bytes per sample) */
         view.setUint16(32, numChannels * 2, true);
         /* bits per sample */
